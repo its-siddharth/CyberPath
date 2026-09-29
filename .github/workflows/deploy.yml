@@ -24,16 +24,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Detect build mode
+        id: build-mode
+        run: |
+          if [ -f package.json ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "artifact_path=./dist" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+            echo "artifact_path=./" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up Node.js
+        if: steps.build-mode.outputs.should_build == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
       - name: Install dependencies
+        if: steps.build-mode.outputs.should_build == 'true'
         run: npm ci || npm install
 
       - name: Build production bundle
+        if: steps.build-mode.outputs.should_build == 'true'
         run: npm run build
 
       - name: Setup Pages
@@ -42,7 +55,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          path: ${{ steps.build-mode.outputs.artifact_path }}
 
       - name: Deploy to GitHub Pages
         id: deployment
